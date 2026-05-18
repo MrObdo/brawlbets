@@ -6,11 +6,15 @@ import { supabase } from "@/lib/supabase"
 const BET_URL =
   "https://zukqtpnjzqgliwgnkwql.supabase.co/functions/v1/place-bet"
 
+const SETTLE_URL =
+  "https://zukqtpnjzqgliwgnkwql.supabase.co/functions/v1/settle-match"
+
 export default function Home() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   const [coins, setCoins] = useState(1000)
+  const [username, setUsername] = useState("")
   const [matches, setMatches] = useState<any[]>([])
   const [leaderboard, setLeaderboard] = useState<any[]>([])
 
@@ -36,13 +40,14 @@ export default function Home() {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("coins, is_admin")
+      .select("coins, is_admin, username")
       .eq("id", u.id)
       .single()
 
     if (profile) {
       setCoins(profile.coins)
       setIsAdmin(profile.is_admin)
+      setUsername(profile.username)
     }
 
     const { data: matchData } = await supabase
@@ -54,7 +59,7 @@ export default function Home() {
 
     const { data: board } = await supabase
       .from("profiles")
-      .select("*")
+      .select("username, coins")
       .order("coins", { ascending: false })
       .limit(10)
 
@@ -63,7 +68,25 @@ export default function Home() {
     setLoading(false)
   }
 
+  /* ---------------- AUTH ---------------- */
+  async function loginWithGoogle() {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: "https://brawlbets.vercel.app"
+      }
+    })
+  }
+
+  async function logout() {
+    await supabase.auth.signOut()
+    setUser(null)
+  }
+
+  /* ---------------- BET ---------------- */
   async function placeBet() {
+    if (!selected) return
+
     const res = await fetch(BET_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -103,7 +126,7 @@ export default function Home() {
   if (loading) {
     return (
       <div className="screen">
-        <div className="loader">Loading matches...</div>
+        <div className="loader">Loading...</div>
 
         <style jsx>{`
           .screen {
@@ -111,13 +134,12 @@ export default function Home() {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: radial-gradient(circle at top, #1b2b50, #06070f);
+            background: #05060a;
             color: white;
           }
 
           .loader {
-            animation: pulse 1.2s infinite;
-            font-weight: 600;
+            animation: pulse 1s infinite;
           }
 
           @keyframes pulse {
@@ -133,22 +155,11 @@ export default function Home() {
   if (!user) {
     return (
       <div className="login">
-        <div className="loginCard">
+        <div className="box">
           <div className="logo">BrawlBets</div>
           <div className="sub">Predict • Bet • Win</div>
 
-          <button
-            onClick={() =>
-              supabase.auth.signInWithOAuth({
-                provider: "google",
-                options: {
-                  redirectTo: "https://brawlbets.vercel.app"
-                }
-              })
-            }
-          >
-            Continue with Google
-          </button>
+          <button onClick={loginWithGoogle}>Login with Google</button>
         </div>
 
         <style jsx>{`
@@ -157,34 +168,27 @@ export default function Home() {
             display: flex;
             align-items: center;
             justify-content: center;
-            background:
-              radial-gradient(circle at top, #1b2b50, transparent 60%),
-              radial-gradient(circle at bottom, #3a1b4f, transparent 60%),
-              #05060a;
+            background: #05060a;
           }
 
-          .loginCard {
-            width: 360px;
-            padding: 28px;
-            border-radius: 18px;
+          .box {
+            width: 340px;
+            padding: 24px;
+            border-radius: 16px;
             background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.12);
-            backdrop-filter: blur(18px);
+            border: 1px solid rgba(255,255,255,0.1);
             text-align: center;
-            box-shadow: 0 25px 80px rgba(0,0,0,0.5);
           }
 
           .logo {
-            font-size: 34px;
+            font-size: 28px;
             font-weight: 900;
-            background: linear-gradient(90deg, #60a5fa, #a78bfa, #fb7185);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: white;
           }
 
           .sub {
             opacity: 0.7;
-            margin-bottom: 18px;
+            margin-bottom: 12px;
           }
 
           button {
@@ -195,12 +199,6 @@ export default function Home() {
             background: linear-gradient(135deg, #3b82f6, #6366f1);
             color: white;
             font-weight: 700;
-            cursor: pointer;
-            transition: 0.2s;
-          }
-
-          button:hover {
-            transform: scale(1.03);
           }
         `}</style>
       </div>
@@ -212,36 +210,40 @@ export default function Home() {
     <div className="bg">
 
       {/* TOP BAR */}
-      <div className="top">
+      <div className="topBar">
+
         <div>
           <div className="title">BrawlBets</div>
-          <div className="email">{user.email}</div>
+          <div className="subText">{username}</div>
         </div>
 
-        <div className="stats">
+        <div className="rightBox">
           <div className="coins">💰 {coins}</div>
           {isAdmin && <div className="admin">ADMIN</div>}
+          <button className="logout" onClick={logout}>Logout</button>
         </div>
+
       </div>
 
+      {/* MSG */}
       {msg && <div className="msg">{msg}</div>}
 
-      {/* MAIN GRID */}
-      <div className="grid">
+      <div className="layout">
 
         {/* MATCHES */}
-        <div className="sectionBox">
-          <div className="sectionTitle">🔥 Live Matches</div>
+        <div className="section">
 
-          {matches.map((m, i) => (
-            <div className="matchCard" key={m.id}>
+          <div className="sectionTitle">🔥 Matches</div>
+
+          {matches.map((m) => (
+            <div className="card" key={m.id}>
               <div className="live">LIVE</div>
 
-              <div className="matchTitle">
-                {m.team_a} <span>VS</span> {m.team_b}
+              <div className="match">
+                {m.team_a} VS {m.team_b}
               </div>
 
-              <div className="buttonRow">
+              <div className="btnRow">
                 <button onClick={() => selectBet(m, m.team_a, m.odds_a)}>
                   {m.team_a}
                 </button>
@@ -252,53 +254,69 @@ export default function Home() {
               </div>
             </div>
           ))}
+
         </div>
 
         {/* LEADERBOARD */}
-        <div className="sideBox">
+        <div className="side">
+
           <div className="sectionTitle">🏆 Leaderboard</div>
 
           {leaderboard.map((u, i) => (
-            <div className="row" key={u.id}>
+            <div className="row" key={i}>
               <span>#{i + 1}</span>
+              <span>{u.username}</span>
               <span>{u.coins}</span>
             </div>
           ))}
+
         </div>
+
       </div>
 
-      {/* BET SLIP */}
+      {/* BET MODAL */}
       {selected && (
-        <div className="slip">
-          <div className="slipTitle">{selected.team}</div>
+        <div className="modal">
 
-          <input
-            type="number"
-            value={stake}
-            onChange={(e) => setStake(Number(e.target.value))}
-          />
+          <div className="modalBox">
 
-          <button onClick={placeBet}>Confirm Bet</button>
-          <button onClick={() => setSelected(null)}>Cancel</button>
+            <div className="modalTitle">
+              {selected.team}
+            </div>
+
+            <div className="odds">
+              Odds: {selected.odds}
+            </div>
+
+            <input
+              value={stake}
+              onChange={(e) => setStake(Number(e.target.value))}
+            />
+
+            <button className="confirm" onClick={placeBet}>
+              Confirm Bet
+            </button>
+
+            <button onClick={() => setSelected(null)}>
+              Cancel
+            </button>
+
+          </div>
+
         </div>
       )}
 
-      {/* STYLES */}
       <style jsx>{`
         .bg {
           min-height: 100vh;
           padding: 16px;
           color: white;
-          background:
-            radial-gradient(circle at top, #1b2b50, transparent 55%),
-            radial-gradient(circle at bottom, #3a1b4f, transparent 55%),
-            #05060a;
+          background: #05060a;
         }
 
-        .top {
+        .topBar {
           display: flex;
           justify-content: space-between;
-          align-items: center;
           margin-bottom: 18px;
         }
 
@@ -307,9 +325,14 @@ export default function Home() {
           font-weight: 900;
         }
 
-        .stats {
+        .subText {
+          opacity: 0.7;
+        }
+
+        .rightBox {
           display: flex;
           gap: 10px;
+          align-items: center;
         }
 
         .coins {
@@ -318,111 +341,61 @@ export default function Home() {
           border-radius: 10px;
         }
 
-        .admin {
-          background: red;
+        .logout {
+          background: #ef4444;
+          border: none;
           padding: 6px 10px;
           border-radius: 10px;
-          font-size: 10px;
+          color: white;
         }
 
-        .grid {
+        .layout {
           display: grid;
           grid-template-columns: 1fr 320px;
           gap: 16px;
         }
 
-        .sectionBox {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .sectionTitle {
-          font-weight: 800;
-          opacity: 0.9;
-        }
-
-        .matchCard {
-          background: rgba(255,255,255,0.07);
-          border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 16px;
+        .card {
+          background: rgba(255,255,255,0.06);
           padding: 14px;
-          transition: 0.2s;
+          border-radius: 14px;
+          margin-bottom: 10px;
         }
 
-        .matchCard:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 15px 40px rgba(99,102,241,0.25);
-        }
-
-        .live {
-          background: linear-gradient(90deg, #ef4444, #f97316);
-          padding: 3px 8px;
-          border-radius: 999px;
-          font-size: 10px;
-          display: inline-block;
-          margin-bottom: 8px;
-        }
-
-        .matchTitle {
-          font-weight: 800;
-          text-align: center;
-        }
-
-        .buttonRow {
+        .btnRow {
           display: flex;
           gap: 10px;
           margin-top: 10px;
         }
 
-        .buttonRow button {
+        .btnRow button {
           flex: 1;
-          padding: 10px;
-          border-radius: 12px;
-          border: none;
-          font-weight: 700;
-          cursor: pointer;
-        }
-
-        .buttonRow button:first-child {
-          background: linear-gradient(135deg, #3b82f6, #6366f1);
-          color: white;
-        }
-
-        .buttonRow button:last-child {
-          background: linear-gradient(135deg, #f97316, #ef4444);
-          color: white;
-        }
-
-        .sideBox {
-          background: rgba(255,255,255,0.05);
-          padding: 14px;
-          border-radius: 16px;
-        }
-
-        .row {
-          display: flex;
-          justify-content: space-between;
-          padding: 4px 0;
-        }
-
-        .slip {
-          position: fixed;
-          bottom: 16px;
-          right: 16px;
-          width: 240px;
-          background: rgba(15,23,42,0.95);
-          padding: 14px;
-          border-radius: 16px;
-        }
-
-        .slip button {
-          width: 100%;
-          margin-top: 8px;
           padding: 10px;
           border-radius: 10px;
           border: none;
           font-weight: 700;
+        }
+
+        .modal {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .modalBox {
+          width: 300px;
+          padding: 16px;
+          background: #111827;
+          border-radius: 16px;
+        }
+
+        .confirm {
+          background: #22c55e;
+          width: 100%;
+          margin-top: 10px;
         }
       `}</style>
 
