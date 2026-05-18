@@ -6,9 +6,6 @@ import { supabase } from "@/lib/supabase"
 const BET_URL =
   "https://zukqtpnjzqgliwgnkwql.supabase.co/functions/v1/place-bet"
 
-const SETTLE_URL =
-  "https://zukqtpnjzqgliwgnkwql.supabase.co/functions/v1/settle-match"
-
 export default function Home() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -35,7 +32,6 @@ export default function Home() {
   async function init() {
     const { data } = await supabase.auth.getUser()
     const u = data.user
-
     setUser(u)
 
     if (!u) {
@@ -78,7 +74,7 @@ export default function Home() {
     setLoading(false)
   }
 
-  /* ---------------- AUTH ---------------- */
+  /* ---------------- LOGIN ---------------- */
   async function login() {
     await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -93,7 +89,7 @@ export default function Home() {
     setUser(null)
   }
 
-  /* ---------------- USERNAME SAVE ---------------- */
+  /* ---------------- SAVE USERNAME ---------------- */
   async function saveUsername() {
     if (!tempUsername || tempUsername.length < 3) {
       setMsg("Username too short")
@@ -106,19 +102,16 @@ export default function Home() {
       .eq("id", user.id)
 
     if (error) {
-      setMsg("Username taken or invalid")
+      setMsg("Username already taken")
       return
     }
 
     setUsername(tempUsername)
     setShowUsernameModal(false)
-    setMsg("Welcome " + tempUsername)
   }
 
   /* ---------------- BET ---------------- */
   async function placeBet() {
-    if (!selected) return
-
     const res = await fetch(BET_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -158,7 +151,7 @@ export default function Home() {
   if (loading) {
     return (
       <div className="screen">
-        <div className="loader">Loading BrawlBets...</div>
+        <div className="loader">Loading markets...</div>
 
         <style jsx>{`
           .screen {
@@ -166,7 +159,7 @@ export default function Home() {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: radial-gradient(circle at top, #0b1220, #05060a);
+            background: radial-gradient(circle at top,#0b1220,#05060a);
             color: white;
           }
 
@@ -198,12 +191,12 @@ export default function Home() {
         <style jsx>{`
           .login {
             height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display:flex;
+            align-items:center;
+            justify-content:center;
             background:
-              radial-gradient(circle at top, #1b2b50, transparent 60%),
-              radial-gradient(circle at bottom, #3a1b4f, transparent 60%),
+              radial-gradient(circle at top,#1b2b50,transparent 60%),
+              radial-gradient(circle at bottom,#3a1b4f,transparent 60%),
               #05060a;
           }
 
@@ -215,15 +208,21 @@ export default function Home() {
             border: 1px solid rgba(255,255,255,0.12);
             backdrop-filter: blur(18px);
             text-align: center;
-            box-shadow: 0 30px 90px rgba(0,0,0,0.7);
+            box-shadow: 0 40px 120px rgba(0,0,0,0.7);
+            animation: float 4s ease-in-out infinite;
+          }
+
+          @keyframes float {
+            0%,100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
           }
 
           .logo {
-            font-size: 34px;
+            font-size: 36px;
             font-weight: 900;
             background: linear-gradient(90deg,#60a5fa,#a78bfa,#fb7185);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;
           }
 
           .sub {
@@ -232,14 +231,19 @@ export default function Home() {
           }
 
           button {
-            width: 100%;
-            padding: 12px;
-            border-radius: 12px;
-            border: none;
+            width:100%;
+            padding:12px;
+            border-radius:12px;
+            border:none;
             background: linear-gradient(135deg,#3b82f6,#6366f1);
-            color: white;
-            font-weight: 700;
-            cursor: pointer;
+            color:white;
+            font-weight:700;
+            cursor:pointer;
+            transition: 0.2s;
+          }
+
+          button:hover {
+            transform: scale(1.05);
           }
         `}</style>
       </div>
@@ -251,12 +255,11 @@ export default function Home() {
     return (
       <div className="overlay">
         <div className="modal">
-          <h2>Choose username</h2>
+          <h2>Choose Username</h2>
 
           <input
             value={tempUsername}
             onChange={(e) => setTempUsername(e.target.value)}
-            placeholder="username"
           />
 
           <button onClick={saveUsername}>Continue</button>
@@ -266,54 +269,53 @@ export default function Home() {
 
         <style jsx>{`
           .overlay {
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #05060a;
-            color: white;
+            height:100vh;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:#05060a;
+            color:white;
           }
 
           .modal {
-            width: 320px;
-            padding: 20px;
-            border-radius: 16px;
+            width:320px;
+            padding:20px;
+            border-radius:16px;
             background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.1);
+            border:1px solid rgba(255,255,255,0.1);
           }
 
           input {
-            width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            border-radius: 10px;
-            border: none;
+            width:100%;
+            padding:10px;
+            margin-top:10px;
+            border-radius:10px;
+            border:none;
           }
 
           button {
-            width: 100%;
-            margin-top: 10px;
-            padding: 10px;
-            border-radius: 10px;
-            border: none;
+            width:100%;
+            margin-top:10px;
+            padding:10px;
+            border-radius:10px;
+            border:none;
             background: linear-gradient(135deg,#22c55e,#16a34a);
-            color: white;
-            font-weight: 700;
+            color:white;
+            font-weight:700;
           }
         `}</style>
       </div>
     )
   }
 
-  /* ---------------- MAIN ---------------- */
+  /* ---------------- MAIN UI ---------------- */
   return (
     <div className="bg">
 
-      {/* TOP */}
-      <div className="top">
+      <div className="topBar">
         <div>
           <div className="title">BrawlBets</div>
-          <div className="username">{username}</div>
+          <div className="userText">{username || "No Username"}</div>
         </div>
 
         <div className="right">
@@ -325,22 +327,20 @@ export default function Home() {
 
       {msg && <div className="msg">{msg}</div>}
 
-      {/* GRID */}
-      <div className="grid">
+      <div className="layout">
 
-        {/* MATCHES */}
         <div>
           <h3>🔥 Matches</h3>
 
           {matches.map((m) => (
-            <div className="card" key={m.id}>
+            <div className="matchCard" key={m.id}>
               <div className="live">LIVE</div>
 
               <div className="match">
                 {m.team_a} VS {m.team_b}
               </div>
 
-              <div className="buttons">
+              <div className="btns">
                 <button onClick={() => selectBet(m, m.team_a, m.odds_a)}>
                   {m.team_a}
                 </button>
@@ -353,14 +353,13 @@ export default function Home() {
           ))}
         </div>
 
-        {/* LEADERBOARD */}
         <div className="side">
           <h3>🏆 Leaderboard</h3>
 
           {leaderboard.map((u, i) => (
             <div className="row" key={i}>
               <span>#{i + 1}</span>
-              <span>{u.username}</span>
+              <span className="name">{u.username || "unknown"}</span>
               <span>{u.coins}</span>
             </div>
           ))}
@@ -368,20 +367,19 @@ export default function Home() {
 
       </div>
 
-      {/* BET MODAL */}
       {selected && (
         <div className="modalOverlay">
-          <div className="betModal">
+          <div className="betBox">
 
             <h2>{selected.team}</h2>
-            <p>Odds: {selected.odds}</p>
+            <p>Odds {selected.odds}</p>
 
             <input
               value={stake}
               onChange={(e) => setStake(Number(e.target.value))}
             />
 
-            <button onClick={placeBet}>Confirm Bet</button>
+            <button onClick={placeBet}>Confirm</button>
             <button onClick={() => setSelected(null)}>Cancel</button>
 
           </div>
@@ -390,102 +388,100 @@ export default function Home() {
 
       <style jsx>{`
         .bg {
-          min-height: 100vh;
-          padding: 16px;
-          color: white;
+          min-height:100vh;
+          padding:16px;
+          color:white;
           background:
             radial-gradient(circle at top,#1b2b50,transparent 60%),
             radial-gradient(circle at bottom,#3a1b4f,transparent 60%),
             #05060a;
         }
 
-        .top {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 16px;
-        }
-
         .title {
-          font-size: 28px;
-          font-weight: 900;
+          font-size:28px;
+          font-weight:900;
         }
 
-        .username {
-          opacity: 0.7;
+        .userText {
+          opacity:0.7;
         }
 
-        .right {
-          display: flex;
-          gap: 10px;
-          align-items: center;
+        .topBar {
+          display:flex;
+          justify-content:space-between;
+          margin-bottom:16px;
         }
 
-        .coins {
+        .layout {
+          display:grid;
+          grid-template-columns:1fr 300px;
+          gap:16px;
+        }
+
+        .matchCard {
           background: rgba(255,255,255,0.08);
-          padding: 6px 10px;
-          border-radius: 10px;
+          padding:14px;
+          border-radius:14px;
+          margin-bottom:10px;
+          transition:0.3s;
         }
 
-        .admin {
-          background: red;
-          padding: 4px 8px;
-          border-radius: 8px;
-        }
-
-        .card {
-          background: rgba(255,255,255,0.08);
-          padding: 14px;
-          border-radius: 14px;
-          margin-bottom: 10px;
+        .matchCard:hover {
+          transform: translateY(-6px);
+          box-shadow: 0 20px 50px rgba(99,102,241,0.3);
         }
 
         .live {
           background: linear-gradient(90deg,#ef4444,#f97316);
-          padding: 3px 8px;
-          border-radius: 999px;
-          font-size: 10px;
+          padding:3px 8px;
+          border-radius:999px;
+          font-size:10px;
         }
 
-        .buttons {
-          display: flex;
-          gap: 10px;
-          margin-top: 10px;
+        .btns {
+          display:flex;
+          gap:10px;
+          margin-top:10px;
         }
 
-        .buttons button {
-          flex: 1;
-          padding: 10px;
-          border-radius: 10px;
-          border: none;
-          font-weight: 700;
+        .btns button {
+          flex:1;
+          padding:10px;
+          border:none;
+          border-radius:10px;
+          font-weight:700;
         }
 
         .side {
           background: rgba(255,255,255,0.05);
-          padding: 14px;
-          border-radius: 14px;
+          padding:14px;
+          border-radius:14px;
         }
 
-        .grid {
-          display: grid;
-          grid-template-columns: 1fr 300px;
-          gap: 16px;
+        .row {
+          display:flex;
+          justify-content:space-between;
+          padding:4px 0;
+        }
+
+        .name {
+          opacity:0.9;
         }
 
         .modalOverlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(0,0,0,0.7);
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          position:fixed;
+          inset:0;
+          background:rgba(0,0,0,0.7);
+          display:flex;
+          align-items:center;
+          justify-content:center;
         }
 
-        .betModal {
-          width: 320px;
-          background: #111827;
-          padding: 16px;
-          border-radius: 16px;
+        .betBox {
+          width:320px;
+          background:#111827;
+          padding:16px;
+          border-radius:16px;
         }
       `}</style>
 
