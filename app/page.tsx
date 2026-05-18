@@ -6,9 +6,6 @@ import { supabase } from "@/lib/supabase"
 const BET_URL =
   "https://zukqtpnjzqgliwgnkwql.supabase.co/functions/v1/place-bet"
 
-const SETTLE_URL =
-  "https://zukqtpnjzqgliwgnkwql.supabase.co/functions/v1/settle-match"
-
 export default function Home() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -21,11 +18,8 @@ export default function Home() {
   const [stake, setStake] = useState(100)
 
   const [msg, setMsg] = useState("")
-  const [authLoading, setAuthLoading] = useState(false)
-
   const [isAdmin, setIsAdmin] = useState(false)
 
-  /* ---------------- INIT ---------------- */
   useEffect(() => {
     init()
   }, [])
@@ -48,7 +42,7 @@ export default function Home() {
 
     if (profile) {
       setCoins(profile.coins)
-      setIsAdmin(profile.is_admin || false)
+      setIsAdmin(profile.is_admin)
     }
 
     const { data: matchData } = await supabase
@@ -69,63 +63,36 @@ export default function Home() {
     setLoading(false)
   }
 
-  /* ---------------- LOGIN ---------------- */
-  async function loginWithGoogle() {
-    setAuthLoading(true)
-
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: "https://brawlbets.vercel.app"
-      }
+  async function placeBet() {
+    const res = await fetch(BET_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: user.id,
+        match_id: selected.match.id,
+        team: selected.team,
+        amount: stake,
+        odds: selected.odds
+      })
     })
 
-    setAuthLoading(false)
-  }
+    const data = await res.json()
 
-  async function logout() {
-    await supabase.auth.signOut()
-    setUser(null)
-  }
-
-  /* ---------------- BET ---------------- */
-  async function placeBet() {
-    if (!selected) return setMsg("No selection")
-
-    try {
-      const res = await fetch(BET_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: user.id,
-          match_id: selected.match.id,
-          team: selected.team,
-          amount: stake,
-          odds: selected.odds
-        })
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        setMsg(data.error || "Bet failed")
-        return
-      }
-
-      setMsg("Bet placed 🎯")
-      setSelected(null)
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("coins")
-        .eq("id", user.id)
-        .single()
-
-      if (profile) setCoins(profile.coins)
-    } catch (err) {
-      console.error(err)
-      setMsg("Network error placing bet")
+    if (!res.ok) {
+      setMsg(data.error || "Bet failed")
+      return
     }
+
+    setMsg("Bet placed 🔥")
+    setSelected(null)
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("coins")
+      .eq("id", user.id)
+      .single()
+
+    if (profile) setCoins(profile.coins)
   }
 
   function selectBet(match: any, team: string, odds: number) {
@@ -136,7 +103,7 @@ export default function Home() {
   if (loading) {
     return (
       <div className="screen">
-        <div className="loader">Loading markets...</div>
+        <div className="loader">Loading matches...</div>
 
         <style jsx>{`
           .screen {
@@ -150,7 +117,7 @@ export default function Home() {
 
           .loader {
             animation: pulse 1.2s infinite;
-            opacity: 0.7;
+            font-weight: 600;
           }
 
           @keyframes pulse {
@@ -166,12 +133,21 @@ export default function Home() {
   if (!user) {
     return (
       <div className="login">
-        <div className="card">
+        <div className="loginCard">
           <div className="logo">BrawlBets</div>
-          <div className="sub">Predict • Bet • Dominate</div>
+          <div className="sub">Predict • Bet • Win</div>
 
-          <button onClick={loginWithGoogle} disabled={authLoading}>
-            {authLoading ? "Redirecting..." : "Continue with Google"}
+          <button
+            onClick={() =>
+              supabase.auth.signInWithOAuth({
+                provider: "google",
+                options: {
+                  redirectTo: "https://brawlbets.vercel.app"
+                }
+              })
+            }
+          >
+            Continue with Google
           </button>
         </div>
 
@@ -182,23 +158,24 @@ export default function Home() {
             align-items: center;
             justify-content: center;
             background:
-              radial-gradient(circle at top, #1b2b50, transparent 55%),
-              radial-gradient(circle at bottom, #3a1b4f, transparent 55%),
-              #06070f;
+              radial-gradient(circle at top, #1b2b50, transparent 60%),
+              radial-gradient(circle at bottom, #3a1b4f, transparent 60%),
+              #05060a;
           }
 
-          .card {
-            width: 340px;
+          .loginCard {
+            width: 360px;
             padding: 28px;
             border-radius: 18px;
             background: rgba(255,255,255,0.06);
             border: 1px solid rgba(255,255,255,0.12);
-            backdrop-filter: blur(16px);
+            backdrop-filter: blur(18px);
             text-align: center;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.5);
           }
 
           .logo {
-            font-size: 32px;
+            font-size: 34px;
             font-weight: 900;
             background: linear-gradient(90deg, #60a5fa, #a78bfa, #fb7185);
             -webkit-background-clip: text;
@@ -219,6 +196,11 @@ export default function Home() {
             color: white;
             font-weight: 700;
             cursor: pointer;
+            transition: 0.2s;
+          }
+
+          button:hover {
+            transform: scale(1.03);
           }
         `}</style>
       </div>
@@ -228,34 +210,38 @@ export default function Home() {
   /* ---------------- MAIN ---------------- */
   return (
     <div className="bg">
+
+      {/* TOP BAR */}
       <div className="top">
         <div>
           <div className="title">BrawlBets</div>
           <div className="email">{user.email}</div>
         </div>
 
-        <div className="right">
+        <div className="stats">
           <div className="coins">💰 {coins}</div>
-          {isAdmin && <div className="adminTag">ADMIN</div>}
-          <button onClick={logout}>Logout</button>
+          {isAdmin && <div className="admin">ADMIN</div>}
         </div>
       </div>
 
       {msg && <div className="msg">{msg}</div>}
 
+      {/* MAIN GRID */}
       <div className="grid">
-        <div>
-          <div className="section">🔥 Live Matches</div>
+
+        {/* MATCHES */}
+        <div className="sectionBox">
+          <div className="sectionTitle">🔥 Live Matches</div>
 
           {matches.map((m, i) => (
-            <div className="card" key={m.id}>
+            <div className="matchCard" key={m.id}>
               <div className="live">LIVE</div>
 
-              <div className="match">
+              <div className="matchTitle">
                 {m.team_a} <span>VS</span> {m.team_b}
               </div>
 
-              <div className="btns">
+              <div className="buttonRow">
                 <button onClick={() => selectBet(m, m.team_a, m.odds_a)}>
                   {m.team_a}
                 </button>
@@ -268,8 +254,9 @@ export default function Home() {
           ))}
         </div>
 
-        <div className="side">
-          <div className="section">🏆 Leaderboard</div>
+        {/* LEADERBOARD */}
+        <div className="sideBox">
+          <div className="sectionTitle">🏆 Leaderboard</div>
 
           {leaderboard.map((u, i) => (
             <div className="row" key={u.id}>
@@ -280,9 +267,10 @@ export default function Home() {
         </div>
       </div>
 
+      {/* BET SLIP */}
       {selected && (
         <div className="slip">
-          <div>{selected.team}</div>
+          <div className="slipTitle">{selected.team}</div>
 
           <input
             type="number"
@@ -295,6 +283,7 @@ export default function Home() {
         </div>
       )}
 
+      {/* STYLES */}
       <style jsx>{`
         .bg {
           min-height: 100vh;
@@ -303,23 +292,36 @@ export default function Home() {
           background:
             radial-gradient(circle at top, #1b2b50, transparent 55%),
             radial-gradient(circle at bottom, #3a1b4f, transparent 55%),
-            #06070f;
+            #05060a;
         }
 
         .top {
           display: flex;
           justify-content: space-between;
+          align-items: center;
+          margin-bottom: 18px;
         }
 
         .title {
-          font-size: 26px;
+          font-size: 28px;
           font-weight: 900;
         }
 
-        .adminTag {
+        .stats {
+          display: flex;
+          gap: 10px;
+        }
+
+        .coins {
+          background: rgba(255,255,255,0.08);
+          padding: 6px 10px;
+          border-radius: 10px;
+        }
+
+        .admin {
           background: red;
-          padding: 3px 6px;
-          border-radius: 8px;
+          padding: 6px 10px;
+          border-radius: 10px;
           font-size: 10px;
         }
 
@@ -329,24 +331,79 @@ export default function Home() {
           gap: 16px;
         }
 
-        .card {
+        .sectionBox {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .sectionTitle {
+          font-weight: 800;
+          opacity: 0.9;
+        }
+
+        .matchCard {
           background: rgba(255,255,255,0.07);
-          padding: 14px;
+          border: 1px solid rgba(255,255,255,0.1);
           border-radius: 16px;
-          margin-bottom: 10px;
+          padding: 14px;
+          transition: 0.2s;
+        }
+
+        .matchCard:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 15px 40px rgba(99,102,241,0.25);
         }
 
         .live {
-          background: red;
+          background: linear-gradient(90deg, #ef4444, #f97316);
           padding: 3px 8px;
           border-radius: 999px;
           font-size: 10px;
+          display: inline-block;
+          margin-bottom: 8px;
         }
 
-        .btns {
+        .matchTitle {
+          font-weight: 800;
+          text-align: center;
+        }
+
+        .buttonRow {
           display: flex;
           gap: 10px;
           margin-top: 10px;
+        }
+
+        .buttonRow button {
+          flex: 1;
+          padding: 10px;
+          border-radius: 12px;
+          border: none;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .buttonRow button:first-child {
+          background: linear-gradient(135deg, #3b82f6, #6366f1);
+          color: white;
+        }
+
+        .buttonRow button:last-child {
+          background: linear-gradient(135deg, #f97316, #ef4444);
+          color: white;
+        }
+
+        .sideBox {
+          background: rgba(255,255,255,0.05);
+          padding: 14px;
+          border-radius: 16px;
+        }
+
+        .row {
+          display: flex;
+          justify-content: space-between;
+          padding: 4px 0;
         }
 
         .slip {
@@ -354,11 +411,21 @@ export default function Home() {
           bottom: 16px;
           right: 16px;
           width: 240px;
-          background: #111827;
+          background: rgba(15,23,42,0.95);
           padding: 14px;
-          border-radius: 14px;
+          border-radius: 16px;
+        }
+
+        .slip button {
+          width: 100%;
+          margin-top: 8px;
+          padding: 10px;
+          border-radius: 10px;
+          border: none;
+          font-weight: 700;
         }
       `}</style>
+
     </div>
   )
 }
