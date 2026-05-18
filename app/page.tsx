@@ -11,18 +11,18 @@ const SETTLE_URL =
 
 export default function Home() {
   const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
   const [coins, setCoins] = useState(1000)
   const [matches, setMatches] = useState<any[]>([])
   const [leaderboard, setLeaderboard] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const [email, setEmail] = useState("")
-  const [loginLoading, setLoginLoading] = useState(false)
 
   const [selected, setSelected] = useState<any>(null)
   const [stake, setStake] = useState(100)
 
   const [msg, setMsg] = useState("")
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [authLoading, setAuthLoading] = useState(false)
 
   useEffect(() => {
     init()
@@ -64,10 +64,17 @@ export default function Home() {
     setLoading(false)
   }
 
-  async function login() {
-    setLoginLoading(true)
-    await supabase.auth.signInWithOtp({ email })
-    setLoginLoading(false)
+  async function loginWithGoogle() {
+    setAuthLoading(true)
+
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: "https://brawlbets.vercel.app"
+      }
+    })
+
+    setAuthLoading(false)
   }
 
   async function logout() {
@@ -75,8 +82,8 @@ export default function Home() {
     setUser(null)
   }
 
-  function selectBet(m: any, team: string, odds: number) {
-    setSelected({ m, team, odds })
+  function selectBet(match: any, team: string, odds: number) {
+    setSelected({ match, team, odds })
   }
 
   async function placeBet() {
@@ -85,7 +92,7 @@ export default function Home() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         user_id: user.id,
-        match_id: selected.m.id,
+        match_id: selected.match.id,
         team: selected.team,
         amount: stake,
         odds: selected.odds
@@ -94,7 +101,7 @@ export default function Home() {
 
     if (!res.ok) return setMsg("Bet failed")
 
-    setMsg("Bet placed 🎯")
+    setMsg("Bet placed successfully 🎯")
     setSelected(null)
 
     const { data } = await supabase
@@ -106,11 +113,11 @@ export default function Home() {
     if (data) setCoins(data.coins)
   }
 
-  /* ================= LOADING ================= */
+  /* ---------------- LOADING ---------------- */
   if (loading) {
     return (
       <div className="screen">
-        <div className="loader">Loading live markets...</div>
+        <div className="loader">Loading markets...</div>
 
         <style jsx>{`
           .screen {
@@ -118,17 +125,17 @@ export default function Home() {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #070A12;
+            background: radial-gradient(circle at top, #1b2b50, #06070f);
             color: white;
           }
 
           .loader {
+            animation: pulse 1.2s infinite;
             opacity: 0.7;
-            animation: pulse 1.5s infinite;
           }
 
           @keyframes pulse {
-            0%,100% { opacity: 0.4; }
+            0%,100% { opacity: 0.3; }
             50% { opacity: 1; }
           }
         `}</style>
@@ -136,52 +143,48 @@ export default function Home() {
     )
   }
 
-  /* ================= LOGIN ================= */
+  /* ---------------- LOGIN ---------------- */
   if (!user) {
     return (
-      <div className="loginWrap">
-        <div className="loginCard">
+      <div className="login">
+        <div className="card">
           <div className="logo">BrawlBets</div>
-          <div className="sub">Predict. Bet. Win.</div>
+          <div className="sub">Predict • Bet • Dominate</div>
 
-          <input
-            placeholder="Enter email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-
-          <button onClick={login} disabled={loginLoading}>
-            {loginLoading ? "Sending..." : "Send Magic Link"}
+          <button onClick={loginWithGoogle} disabled={authLoading}>
+            {authLoading ? "Redirecting..." : "Continue with Google"}
           </button>
         </div>
 
         <style jsx>{`
-          .loginWrap {
+          .login {
             height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             background:
-              radial-gradient(circle at top, #1b2b50, transparent 50%),
-              radial-gradient(circle at bottom, #3a1b4f, transparent 50%),
+              radial-gradient(circle at top, #1b2b50, transparent 55%),
+              radial-gradient(circle at bottom, #3a1b4f, transparent 55%),
               #06070f;
           }
 
-          .loginCard {
+          .card {
             width: 340px;
-            padding: 26px;
+            padding: 28px;
             border-radius: 18px;
             background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.1);
-            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(16px);
             text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
           }
 
           .logo {
-            font-size: 30px;
-            font-weight: 800;
-            margin-bottom: 6px;
-            color: white;
+            font-size: 32px;
+            font-weight: 900;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa, #fb7185);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
           }
 
           .sub {
@@ -189,42 +192,30 @@ export default function Home() {
             margin-bottom: 18px;
           }
 
-          input {
-            width: 100%;
-            padding: 10px;
-            border-radius: 10px;
-            border: none;
-            margin-bottom: 10px;
-            outline: none;
-          }
-
           button {
             width: 100%;
-            padding: 10px;
-            border-radius: 10px;
+            padding: 12px;
+            border-radius: 12px;
             border: none;
             background: linear-gradient(135deg, #3b82f6, #6366f1);
             color: white;
+            font-weight: 700;
             cursor: pointer;
             transition: 0.2s;
           }
 
           button:hover {
-            transform: scale(1.02);
-          }
-
-          button:disabled {
-            opacity: 0.6;
+            transform: scale(1.03);
           }
         `}</style>
       </div>
     )
   }
 
-  /* ================= MAIN APP ================= */
+  /* ---------------- MAIN APP ---------------- */
   return (
     <div className="bg">
-      <div className="topbar">
+      <div className="top">
         <div>
           <div className="title">BrawlBets</div>
           <div className="email">{user.email}</div>
@@ -232,6 +223,7 @@ export default function Home() {
 
         <div className="right">
           <div className="coins">💰 {coins}</div>
+          <button onClick={() => setIsAdmin(!isAdmin)}>Admin</button>
           <button onClick={logout}>Logout</button>
         </div>
       </div>
@@ -239,11 +231,12 @@ export default function Home() {
       {msg && <div className="msg">{msg}</div>}
 
       <div className="grid">
+        {/* MATCHES */}
         <div>
           <div className="section">🔥 Live Matches</div>
 
           {matches.map((m, i) => (
-            <div className="card" key={m.id} style={{ animationDelay: `${i * 60}ms` }}>
+            <div className="card" key={m.id} style={{ animationDelay: `${i * 40}ms` }}>
               <div className="live">LIVE</div>
 
               <div className="match">
@@ -251,7 +244,7 @@ export default function Home() {
               </div>
 
               <div className="odds">
-                {m.odds_a} • {m.odds_b}
+                Odds: {m.odds_a} • {m.odds_b}
               </div>
 
               <div className="btns">
@@ -266,6 +259,7 @@ export default function Home() {
           ))}
         </div>
 
+        {/* LEADERBOARD */}
         <div className="side">
           <div className="section">🏆 Leaderboard</div>
 
@@ -278,10 +272,11 @@ export default function Home() {
         </div>
       </div>
 
+      {/* BET SLIP */}
       {selected && (
         <div className="slip">
-          <div>Bet Slip</div>
-          <div>{selected.team}</div>
+          <div className="slipTitle">Bet Slip</div>
+          <div className="slipTeam">{selected.team}</div>
 
           <input
             type="number"
@@ -289,31 +284,35 @@ export default function Home() {
             onChange={(e) => setStake(Number(e.target.value))}
           />
 
-          <button onClick={placeBet}>Confirm</button>
-          <button onClick={() => setSelected(null)}>Close</button>
+          <button onClick={placeBet}>Confirm Bet</button>
+          <button onClick={() => setSelected(null)}>Cancel</button>
         </div>
       )}
 
+      {/* STYLES */}
       <style jsx>{`
         .bg {
           min-height: 100vh;
           padding: 16px;
           color: white;
           background:
-            radial-gradient(circle at top, #1b2b50, transparent 50%),
-            radial-gradient(circle at bottom, #3a1b4f, transparent 50%),
+            radial-gradient(circle at top, #1b2b50, transparent 55%),
+            radial-gradient(circle at bottom, #3a1b4f, transparent 55%),
             #06070f;
         }
 
-        .topbar {
+        .top {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 20px;
+          margin-bottom: 18px;
         }
 
         .title {
-          font-size: 24px;
-          font-weight: 800;
+          font-size: 26px;
+          font-weight: 900;
+          background: linear-gradient(90deg, #60a5fa, #a78bfa, #fb7185);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
         }
 
         .grid {
@@ -323,72 +322,124 @@ export default function Home() {
         }
 
         .card {
-          background: rgba(255,255,255,0.06);
+          background: rgba(255,255,255,0.07);
+          border: 1px solid rgba(255,255,255,0.1);
           padding: 14px;
-          border-radius: 14px;
+          border-radius: 16px;
           margin-bottom: 10px;
+          backdrop-filter: blur(16px);
+          transition: 0.25s;
+          animation: fadeIn 0.35s ease forwards;
           position: relative;
-          backdrop-filter: blur(10px);
-          transition: 0.2s;
-          animation: fadeIn 0.4s ease forwards;
         }
 
         .card:hover {
-          transform: translateY(-3px);
+          transform: translateY(-5px);
+          box-shadow: 0 15px 40px rgba(99,102,241,0.2);
         }
 
         .live {
           position: absolute;
-          top: 8px;
-          right: 8px;
-          background: red;
-          padding: 2px 6px;
-          border-radius: 10px;
+          top: 10px;
+          right: 10px;
+          background: linear-gradient(90deg, #ef4444, #f97316);
+          padding: 3px 8px;
+          border-radius: 999px;
           font-size: 10px;
+          font-weight: 800;
+          animation: pulse 1.5s infinite;
         }
 
         .match {
           text-align: center;
-          font-weight: 700;
+          font-weight: 800;
+        }
+
+        .match span {
+          opacity: 0.6;
         }
 
         .btns {
           display: flex;
-          gap: 8px;
-          margin-top: 10px;
+          gap: 10px;
+          margin-top: 12px;
         }
 
-        button {
+        .btns button {
           flex: 1;
-          padding: 8px;
-          border-radius: 8px;
+          padding: 10px;
+          border-radius: 12px;
           border: none;
           cursor: pointer;
+          font-weight: 700;
+          color: white;
+          transition: 0.2s;
+        }
+
+        .btns button:first-child {
+          background: linear-gradient(135deg, #3b82f6, #6366f1);
+        }
+
+        .btns button:last-child {
+          background: linear-gradient(135deg, #f97316, #ef4444);
+        }
+
+        .btns button:hover {
+          transform: scale(1.05);
         }
 
         .side {
           background: rgba(255,255,255,0.04);
-          padding: 12px;
-          border-radius: 12px;
+          padding: 14px;
+          border-radius: 16px;
         }
 
         .row {
           display: flex;
           justify-content: space-between;
+          padding: 4px 0;
         }
 
         .slip {
           position: fixed;
           bottom: 16px;
           right: 16px;
-          background: #111827;
+          width: 240px;
+          background: rgba(15,23,42,0.95);
+          border: 1px solid rgba(99,102,241,0.3);
           padding: 14px;
-          border-radius: 12px;
+          border-radius: 16px;
+          backdrop-filter: blur(16px);
+        }
+
+        .slip button {
+          width: 100%;
+          margin-top: 8px;
+          padding: 10px;
+          border-radius: 10px;
+          border: none;
+          cursor: pointer;
+          font-weight: 700;
+        }
+
+        .slip button:first-of-type {
+          background: linear-gradient(135deg, #22c55e, #16a34a);
+          color: white;
+        }
+
+        .slip button:last-of-type {
+          background: rgba(255,255,255,0.08);
+          color: white;
         }
 
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
+          from { opacity: 0; transform: translateY(12px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+          0%,100% { opacity: 1; }
+          50% { opacity: 0.6; }
         }
       `}</style>
     </div>
