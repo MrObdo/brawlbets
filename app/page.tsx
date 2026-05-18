@@ -13,8 +13,10 @@ export default function Home() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
-  const [coins, setCoins] = useState(1000)
+  const [coins, setCoins] = useState(0)
   const [username, setUsername] = useState("")
+  const [isAdmin, setIsAdmin] = useState(false)
+
   const [matches, setMatches] = useState<any[]>([])
   const [leaderboard, setLeaderboard] = useState<any[]>([])
 
@@ -22,8 +24,10 @@ export default function Home() {
   const [stake, setStake] = useState(100)
 
   const [msg, setMsg] = useState("")
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [showUsernameModal, setShowUsernameModal] = useState(false)
+  const [tempUsername, setTempUsername] = useState("")
 
+  /* ---------------- INIT ---------------- */
   useEffect(() => {
     init()
   }, [])
@@ -31,6 +35,7 @@ export default function Home() {
   async function init() {
     const { data } = await supabase.auth.getUser()
     const u = data.user
+
     setUser(u)
 
     if (!u) {
@@ -40,14 +45,19 @@ export default function Home() {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("coins, is_admin, username")
+      .select("coins, username, is_admin")
       .eq("id", u.id)
       .single()
 
     if (profile) {
-      setCoins(profile.coins)
-      setIsAdmin(profile.is_admin)
-      setUsername(profile.username)
+      setCoins(profile.coins ?? 0)
+      setIsAdmin(profile.is_admin ?? false)
+
+      if (!profile.username) {
+        setShowUsernameModal(true)
+      } else {
+        setUsername(profile.username)
+      }
     }
 
     const { data: matchData } = await supabase
@@ -69,7 +79,7 @@ export default function Home() {
   }
 
   /* ---------------- AUTH ---------------- */
-  async function loginWithGoogle() {
+  async function login() {
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -81,6 +91,28 @@ export default function Home() {
   async function logout() {
     await supabase.auth.signOut()
     setUser(null)
+  }
+
+  /* ---------------- USERNAME SAVE ---------------- */
+  async function saveUsername() {
+    if (!tempUsername || tempUsername.length < 3) {
+      setMsg("Username too short")
+      return
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ username: tempUsername })
+      .eq("id", user.id)
+
+    if (error) {
+      setMsg("Username taken or invalid")
+      return
+    }
+
+    setUsername(tempUsername)
+    setShowUsernameModal(false)
+    setMsg("Welcome " + tempUsername)
   }
 
   /* ---------------- BET ---------------- */
@@ -126,7 +158,7 @@ export default function Home() {
   if (loading) {
     return (
       <div className="screen">
-        <div className="loader">Loading...</div>
+        <div className="loader">Loading BrawlBets...</div>
 
         <style jsx>{`
           .screen {
@@ -134,12 +166,13 @@ export default function Home() {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #05060a;
+            background: radial-gradient(circle at top, #0b1220, #05060a);
             color: white;
           }
 
           .loader {
-            animation: pulse 1s infinite;
+            animation: pulse 1.2s infinite;
+            font-weight: 600;
           }
 
           @keyframes pulse {
@@ -155,11 +188,11 @@ export default function Home() {
   if (!user) {
     return (
       <div className="login">
-        <div className="box">
+        <div className="card">
           <div className="logo">BrawlBets</div>
           <div className="sub">Predict • Bet • Win</div>
 
-          <button onClick={loginWithGoogle}>Login with Google</button>
+          <button onClick={login}>Continue with Google</button>
         </div>
 
         <style jsx>{`
@@ -168,27 +201,34 @@ export default function Home() {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #05060a;
+            background:
+              radial-gradient(circle at top, #1b2b50, transparent 60%),
+              radial-gradient(circle at bottom, #3a1b4f, transparent 60%),
+              #05060a;
           }
 
-          .box {
-            width: 340px;
-            padding: 24px;
-            border-radius: 16px;
+          .card {
+            width: 360px;
+            padding: 28px;
+            border-radius: 18px;
             background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(18px);
             text-align: center;
+            box-shadow: 0 30px 90px rgba(0,0,0,0.7);
           }
 
           .logo {
-            font-size: 28px;
+            font-size: 34px;
             font-weight: 900;
-            color: white;
+            background: linear-gradient(90deg,#60a5fa,#a78bfa,#fb7185);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
           }
 
           .sub {
             opacity: 0.7;
-            margin-bottom: 12px;
+            margin-bottom: 18px;
           }
 
           button {
@@ -196,7 +236,67 @@ export default function Home() {
             padding: 12px;
             border-radius: 12px;
             border: none;
-            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            background: linear-gradient(135deg,#3b82f6,#6366f1);
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+          }
+        `}</style>
+      </div>
+    )
+  }
+
+  /* ---------------- USERNAME MODAL ---------------- */
+  if (showUsernameModal) {
+    return (
+      <div className="overlay">
+        <div className="modal">
+          <h2>Choose username</h2>
+
+          <input
+            value={tempUsername}
+            onChange={(e) => setTempUsername(e.target.value)}
+            placeholder="username"
+          />
+
+          <button onClick={saveUsername}>Continue</button>
+
+          {msg && <p>{msg}</p>}
+        </div>
+
+        <style jsx>{`
+          .overlay {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #05060a;
+            color: white;
+          }
+
+          .modal {
+            width: 320px;
+            padding: 20px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+          }
+
+          input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 10px;
+            border: none;
+          }
+
+          button {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg,#22c55e,#16a34a);
             color: white;
             font-weight: 700;
           }
@@ -209,31 +309,28 @@ export default function Home() {
   return (
     <div className="bg">
 
-      {/* TOP BAR */}
-      <div className="topBar">
-
+      {/* TOP */}
+      <div className="top">
         <div>
           <div className="title">BrawlBets</div>
-          <div className="subText">{username}</div>
+          <div className="username">{username}</div>
         </div>
 
-        <div className="rightBox">
+        <div className="right">
           <div className="coins">💰 {coins}</div>
           {isAdmin && <div className="admin">ADMIN</div>}
-          <button className="logout" onClick={logout}>Logout</button>
+          <button onClick={logout}>Logout</button>
         </div>
-
       </div>
 
-      {/* MSG */}
       {msg && <div className="msg">{msg}</div>}
 
-      <div className="layout">
+      {/* GRID */}
+      <div className="grid">
 
         {/* MATCHES */}
-        <div className="section">
-
-          <div className="sectionTitle">🔥 Matches</div>
+        <div>
+          <h3>🔥 Matches</h3>
 
           {matches.map((m) => (
             <div className="card" key={m.id}>
@@ -243,7 +340,7 @@ export default function Home() {
                 {m.team_a} VS {m.team_b}
               </div>
 
-              <div className="btnRow">
+              <div className="buttons">
                 <button onClick={() => selectBet(m, m.team_a, m.odds_a)}>
                   {m.team_a}
                 </button>
@@ -254,13 +351,11 @@ export default function Home() {
               </div>
             </div>
           ))}
-
         </div>
 
         {/* LEADERBOARD */}
         <div className="side">
-
-          <div className="sectionTitle">🏆 Leaderboard</div>
+          <h3>🏆 Leaderboard</h3>
 
           {leaderboard.map((u, i) => (
             <div className="row" key={i}>
@@ -269,40 +364,27 @@ export default function Home() {
               <span>{u.coins}</span>
             </div>
           ))}
-
         </div>
 
       </div>
 
       {/* BET MODAL */}
       {selected && (
-        <div className="modal">
+        <div className="modalOverlay">
+          <div className="betModal">
 
-          <div className="modalBox">
-
-            <div className="modalTitle">
-              {selected.team}
-            </div>
-
-            <div className="odds">
-              Odds: {selected.odds}
-            </div>
+            <h2>{selected.team}</h2>
+            <p>Odds: {selected.odds}</p>
 
             <input
               value={stake}
               onChange={(e) => setStake(Number(e.target.value))}
             />
 
-            <button className="confirm" onClick={placeBet}>
-              Confirm Bet
-            </button>
-
-            <button onClick={() => setSelected(null)}>
-              Cancel
-            </button>
+            <button onClick={placeBet}>Confirm Bet</button>
+            <button onClick={() => setSelected(null)}>Cancel</button>
 
           </div>
-
         </div>
       )}
 
@@ -311,13 +393,16 @@ export default function Home() {
           min-height: 100vh;
           padding: 16px;
           color: white;
-          background: #05060a;
+          background:
+            radial-gradient(circle at top,#1b2b50,transparent 60%),
+            radial-gradient(circle at bottom,#3a1b4f,transparent 60%),
+            #05060a;
         }
 
-        .topBar {
+        .top {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 18px;
+          margin-bottom: 16px;
         }
 
         .title {
@@ -325,11 +410,11 @@ export default function Home() {
           font-weight: 900;
         }
 
-        .subText {
+        .username {
           opacity: 0.7;
         }
 
-        .rightBox {
+        .right {
           display: flex;
           gap: 10px;
           align-items: center;
@@ -341,34 +426,33 @@ export default function Home() {
           border-radius: 10px;
         }
 
-        .logout {
-          background: #ef4444;
-          border: none;
-          padding: 6px 10px;
-          border-radius: 10px;
-          color: white;
-        }
-
-        .layout {
-          display: grid;
-          grid-template-columns: 1fr 320px;
-          gap: 16px;
+        .admin {
+          background: red;
+          padding: 4px 8px;
+          border-radius: 8px;
         }
 
         .card {
-          background: rgba(255,255,255,0.06);
+          background: rgba(255,255,255,0.08);
           padding: 14px;
           border-radius: 14px;
           margin-bottom: 10px;
         }
 
-        .btnRow {
+        .live {
+          background: linear-gradient(90deg,#ef4444,#f97316);
+          padding: 3px 8px;
+          border-radius: 999px;
+          font-size: 10px;
+        }
+
+        .buttons {
           display: flex;
           gap: 10px;
           margin-top: 10px;
         }
 
-        .btnRow button {
+        .buttons button {
           flex: 1;
           padding: 10px;
           border-radius: 10px;
@@ -376,26 +460,32 @@ export default function Home() {
           font-weight: 700;
         }
 
-        .modal {
+        .side {
+          background: rgba(255,255,255,0.05);
+          padding: 14px;
+          border-radius: 14px;
+        }
+
+        .grid {
+          display: grid;
+          grid-template-columns: 1fr 300px;
+          gap: 16px;
+        }
+
+        .modalOverlay {
           position: fixed;
           inset: 0;
-          background: rgba(0,0,0,0.6);
+          background: rgba(0,0,0,0.7);
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
-        .modalBox {
-          width: 300px;
-          padding: 16px;
+        .betModal {
+          width: 320px;
           background: #111827;
+          padding: 16px;
           border-radius: 16px;
-        }
-
-        .confirm {
-          background: #22c55e;
-          width: 100%;
-          margin-top: 10px;
         }
       `}</style>
 
