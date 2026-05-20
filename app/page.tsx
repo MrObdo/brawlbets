@@ -24,7 +24,6 @@ export default function Home() {
   const [showUsernameModal, setShowUsernameModal] = useState(false)
   const [tempUsername, setTempUsername] = useState("")
 
-  /* ---------------- INIT ---------------- */
   useEffect(() => {
     init()
   }, [])
@@ -32,7 +31,6 @@ export default function Home() {
   async function init() {
     const { data } = await supabase.auth.getUser()
     const u = data.user
-
     setUser(u)
 
     if (!u) {
@@ -75,7 +73,6 @@ export default function Home() {
     setLoading(false)
   }
 
-  /* ---------------- LOGIN ---------------- */
   async function login() {
     await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -90,7 +87,6 @@ export default function Home() {
     setUser(null)
   }
 
-  /* ---------------- USERNAME ---------------- */
   async function saveUsername() {
     if (!tempUsername || tempUsername.length < 3) {
       setMsg("Username too short")
@@ -111,7 +107,6 @@ export default function Home() {
     setShowUsernameModal(false)
   }
 
-  /* ---------------- BET ---------------- */
   async function placeBet() {
     if (!selected) return
 
@@ -139,7 +134,6 @@ export default function Home() {
     setMsg("Bet placed 🔥")
     setSelected(null)
 
-    // refresh coins immediately (IMPORTANT FIX)
     const { data: profile } = await supabase
       .from("profiles")
       .select("coins")
@@ -153,7 +147,6 @@ export default function Home() {
     setSelected({ match, team, odds })
   }
 
-  /* ---------------- LOADING ---------------- */
   if (loading) {
     return (
       <div className="screen">
@@ -161,7 +154,7 @@ export default function Home() {
 
         <style jsx>{`
           .screen {
-            height: 100vh;
+            height:100vh;
             display:flex;
             align-items:center;
             justify-content:center;
@@ -170,7 +163,7 @@ export default function Home() {
           }
 
           .loader {
-            animation: pulse 1.2s infinite;
+            animation:pulse 1.2s infinite;
           }
 
           @keyframes pulse {
@@ -182,7 +175,6 @@ export default function Home() {
     )
   }
 
-  /* ---------------- LOGIN ---------------- */
   if (!user) {
     return (
       <div className="login">
@@ -210,7 +202,7 @@ export default function Home() {
             border-radius:18px;
             background: rgba(255,255,255,0.06);
             border:1px solid rgba(255,255,255,0.12);
-            backdrop-filter: blur(20px);
+            backdrop-filter:blur(20px);
             text-align:center;
             animation: float 4s ease-in-out infinite;
           }
@@ -238,31 +230,45 @@ export default function Home() {
             background: linear-gradient(135deg,#3b82f6,#6366f1);
             color:white;
             font-weight:700;
-            transition:0.2s;
             cursor:pointer;
+            transition:0.2s;
           }
 
-          button:hover { transform:scale(1.05); }
+          button:hover {
+            transform:scale(1.05);
+          }
         `}</style>
       </div>
     )
   }
 
-  /* ---------------- MAIN ---------------- */
   return (
     <div className="bg">
 
       {/* TOP BAR */}
       <div className="top">
+
         <div>
           <div className="title">BrawlBets</div>
           <div className="user">{username}</div>
         </div>
 
         <div className="right">
+
           <div className="coins">💰 {coins}</div>
-          {isAdmin && <div className="admin">ADMIN</div>}
-          <button onClick={logout}>Logout</button>
+
+          {/* ADMIN BUTTON FIXED */}
+          {isAdmin && (
+            <button className="adminBtn">
+              ADMIN
+            </button>
+          )}
+
+          {/* LOGOUT BUTTON FIXED */}
+          <button className="logoutBtn" onClick={logout}>
+            Logout
+          </button>
+
         </div>
       </div>
 
@@ -276,13 +282,21 @@ export default function Home() {
 
           {matches.map((m) => (
             <div className="match" key={m.id}>
+
               <div className="live">LIVE</div>
 
               <div className="teams">
                 {m.team_a} VS {m.team_b}
               </div>
 
+              {/* ODDS DISPLAY FIX (NEW) */}
+              <div className="odds">
+                <span>{m.team_a} odds: {m.odds_a}</span>
+                <span>{m.team_b} odds: {m.odds_b}</span>
+              </div>
+
               <div className="betRow">
+
                 <button
                   className="green"
                   onClick={() => selectBet(m, m.team_a, m.odds_a)}
@@ -296,7 +310,9 @@ export default function Home() {
                 >
                   {m.team_b}
                 </button>
+
               </div>
+
             </div>
           ))}
         </div>
@@ -320,6 +336,7 @@ export default function Home() {
       {selected && (
         <div className="overlay">
           <div className="modal">
+
             <h2>{selected.team}</h2>
             <p>Odds: {selected.odds}</p>
 
@@ -330,11 +347,13 @@ export default function Home() {
 
             <button onClick={placeBet}>Confirm Bet</button>
             <button onClick={() => setSelected(null)}>Cancel</button>
+
           </div>
         </div>
       )}
 
       <style jsx>{`
+
         .bg {
           min-height:100vh;
           padding:16px;
@@ -355,6 +374,50 @@ export default function Home() {
 
         .user { opacity:0.7; }
 
+        .right {
+          display:flex;
+          gap:10px;
+          align-items:center;
+        }
+
+        .coins {
+          background:rgba(255,255,255,0.08);
+          padding:6px 10px;
+          border-radius:10px;
+        }
+
+        /* ADMIN BUTTON STYLE FIX */
+        .adminBtn {
+          background: linear-gradient(135deg,#f59e0b,#ef4444);
+          border:none;
+          padding:8px 12px;
+          border-radius:10px;
+          color:white;
+          font-weight:700;
+          cursor:pointer;
+          transition:0.2s;
+        }
+
+        .adminBtn:hover {
+          transform:scale(1.05);
+        }
+
+        /* LOGOUT BUTTON STYLE FIX */
+        .logoutBtn {
+          background: linear-gradient(135deg,#64748b,#334155);
+          border:none;
+          padding:8px 12px;
+          border-radius:10px;
+          color:white;
+          font-weight:700;
+          cursor:pointer;
+          transition:0.2s;
+        }
+
+        .logoutBtn:hover {
+          transform:scale(1.05);
+        }
+
         .grid {
           display:grid;
           grid-template-columns:1fr 300px;
@@ -362,7 +425,7 @@ export default function Home() {
         }
 
         .match {
-          background: rgba(255,255,255,0.08);
+          background:rgba(255,255,255,0.08);
           padding:14px;
           border-radius:14px;
           margin-bottom:10px;
@@ -370,15 +433,23 @@ export default function Home() {
         }
 
         .match:hover {
-          transform: translateY(-6px);
+          transform:translateY(-6px);
           box-shadow:0 20px 60px rgba(99,102,241,0.3);
         }
 
         .live {
-          background: linear-gradient(90deg,#ef4444,#f97316);
+          background:linear-gradient(90deg,#ef4444,#f97316);
           padding:3px 8px;
           border-radius:999px;
           font-size:10px;
+        }
+
+        .odds {
+          display:flex;
+          justify-content:space-between;
+          font-size:12px;
+          opacity:0.7;
+          margin-top:6px;
         }
 
         .betRow {
@@ -393,8 +464,8 @@ export default function Home() {
           border:none;
           padding:10px;
           border-radius:10px;
-          font-weight:700;
           color:white;
+          font-weight:700;
         }
 
         .red {
@@ -403,12 +474,12 @@ export default function Home() {
           border:none;
           padding:10px;
           border-radius:10px;
-          font-weight:700;
           color:white;
+          font-weight:700;
         }
 
         .side {
-          background: rgba(255,255,255,0.05);
+          background:rgba(255,255,255,0.05);
           padding:14px;
           border-radius:14px;
         }
@@ -433,6 +504,7 @@ export default function Home() {
           padding:16px;
           border-radius:16px;
         }
+
       `}</style>
 
     </div>
