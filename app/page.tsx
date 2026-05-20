@@ -32,6 +32,7 @@ export default function Home() {
   async function init() {
     const { data } = await supabase.auth.getUser()
     const u = data.user
+
     setUser(u)
 
     if (!u) {
@@ -89,7 +90,7 @@ export default function Home() {
     setUser(null)
   }
 
-  /* ---------------- SAVE USERNAME ---------------- */
+  /* ---------------- USERNAME ---------------- */
   async function saveUsername() {
     if (!tempUsername || tempUsername.length < 3) {
       setMsg("Username too short")
@@ -102,7 +103,7 @@ export default function Home() {
       .eq("id", user.id)
 
     if (error) {
-      setMsg("Username already taken")
+      setMsg("Username taken")
       return
     }
 
@@ -112,6 +113,10 @@ export default function Home() {
 
   /* ---------------- BET ---------------- */
   async function placeBet() {
+    if (!selected) return
+
+    setMsg("Placing bet...")
+
     const res = await fetch(BET_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -134,6 +139,7 @@ export default function Home() {
     setMsg("Bet placed 🔥")
     setSelected(null)
 
+    // refresh coins immediately (IMPORTANT FIX)
     const { data: profile } = await supabase
       .from("profiles")
       .select("coins")
@@ -151,26 +157,25 @@ export default function Home() {
   if (loading) {
     return (
       <div className="screen">
-        <div className="loader">Loading markets...</div>
+        <div className="loader">Loading BrawlBets...</div>
 
         <style jsx>{`
           .screen {
             height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: radial-gradient(circle at top,#0b1220,#05060a);
-            color: white;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background: radial-gradient(circle,#0b1220,#05060a);
+            color:white;
           }
 
           .loader {
             animation: pulse 1.2s infinite;
-            font-weight: 600;
           }
 
           @keyframes pulse {
-            0%,100% { opacity: 0.3; }
-            50% { opacity: 1; }
+            0%,100%{opacity:0.3}
+            50%{opacity:1}
           }
         `}</style>
       </div>
@@ -184,13 +189,12 @@ export default function Home() {
         <div className="card">
           <div className="logo">BrawlBets</div>
           <div className="sub">Predict • Bet • Win</div>
-
           <button onClick={login}>Continue with Google</button>
         </div>
 
         <style jsx>{`
           .login {
-            height: 100vh;
+            height:100vh;
             display:flex;
             align-items:center;
             justify-content:center;
@@ -201,121 +205,58 @@ export default function Home() {
           }
 
           .card {
-            width: 360px;
-            padding: 28px;
-            border-radius: 18px;
+            width:360px;
+            padding:28px;
+            border-radius:18px;
             background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.12);
-            backdrop-filter: blur(18px);
-            text-align: center;
-            box-shadow: 0 40px 120px rgba(0,0,0,0.7);
+            border:1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(20px);
+            text-align:center;
             animation: float 4s ease-in-out infinite;
           }
 
           @keyframes float {
-            0%,100% { transform: translateY(0px); }
-            50% { transform: translateY(-8px); }
+            0%,100%{transform:translateY(0)}
+            50%{transform:translateY(-8px)}
           }
 
           .logo {
-            font-size: 36px;
-            font-weight: 900;
+            font-size:36px;
+            font-weight:900;
             background: linear-gradient(90deg,#60a5fa,#a78bfa,#fb7185);
             -webkit-background-clip:text;
             -webkit-text-fill-color:transparent;
           }
 
-          .sub {
-            opacity: 0.7;
-            margin-bottom: 18px;
-          }
+          .sub { opacity:0.7; margin-bottom:16px; }
 
           button {
             width:100%;
             padding:12px;
-            border-radius:12px;
             border:none;
+            border-radius:12px;
             background: linear-gradient(135deg,#3b82f6,#6366f1);
             color:white;
             font-weight:700;
+            transition:0.2s;
             cursor:pointer;
-            transition: 0.2s;
           }
 
-          button:hover {
-            transform: scale(1.05);
-          }
+          button:hover { transform:scale(1.05); }
         `}</style>
       </div>
     )
   }
 
-  /* ---------------- USERNAME MODAL ---------------- */
-  if (showUsernameModal) {
-    return (
-      <div className="overlay">
-        <div className="modal">
-          <h2>Choose Username</h2>
-
-          <input
-            value={tempUsername}
-            onChange={(e) => setTempUsername(e.target.value)}
-          />
-
-          <button onClick={saveUsername}>Continue</button>
-
-          {msg && <p>{msg}</p>}
-        </div>
-
-        <style jsx>{`
-          .overlay {
-            height:100vh;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            background:#05060a;
-            color:white;
-          }
-
-          .modal {
-            width:320px;
-            padding:20px;
-            border-radius:16px;
-            background: rgba(255,255,255,0.06);
-            border:1px solid rgba(255,255,255,0.1);
-          }
-
-          input {
-            width:100%;
-            padding:10px;
-            margin-top:10px;
-            border-radius:10px;
-            border:none;
-          }
-
-          button {
-            width:100%;
-            margin-top:10px;
-            padding:10px;
-            border-radius:10px;
-            border:none;
-            background: linear-gradient(135deg,#22c55e,#16a34a);
-            color:white;
-            font-weight:700;
-          }
-        `}</style>
-      </div>
-    )
-  }
-
-  /* ---------------- MAIN UI ---------------- */
+  /* ---------------- MAIN ---------------- */
   return (
     <div className="bg">
 
-      <div className="topBar">
+      {/* TOP BAR */}
+      <div className="top">
         <div>
           <div className="title">BrawlBets</div>
-          <div className="userText">{username || "No Username"}</div>
+          <div className="user">{username}</div>
         </div>
 
         <div className="right">
@@ -327,25 +268,32 @@ export default function Home() {
 
       {msg && <div className="msg">{msg}</div>}
 
-      <div className="layout">
+      <div className="grid">
 
+        {/* MATCHES */}
         <div>
           <h3>🔥 Matches</h3>
 
           {matches.map((m) => (
-            <div className="matchCard" key={m.id}>
+            <div className="match" key={m.id}>
               <div className="live">LIVE</div>
 
-              <div className="match">
+              <div className="teams">
                 {m.team_a} VS {m.team_b}
               </div>
 
-              <div className="btns">
-                <button onClick={() => selectBet(m, m.team_a, m.odds_a)}>
+              <div className="betRow">
+                <button
+                  className="green"
+                  onClick={() => selectBet(m, m.team_a, m.odds_a)}
+                >
                   {m.team_a}
                 </button>
 
-                <button onClick={() => selectBet(m, m.team_b, m.odds_b)}>
+                <button
+                  className="red"
+                  onClick={() => selectBet(m, m.team_b, m.odds_b)}
+                >
                   {m.team_b}
                 </button>
               </div>
@@ -353,13 +301,14 @@ export default function Home() {
           ))}
         </div>
 
+        {/* LEADERBOARD */}
         <div className="side">
           <h3>🏆 Leaderboard</h3>
 
           {leaderboard.map((u, i) => (
             <div className="row" key={i}>
               <span>#{i + 1}</span>
-              <span className="name">{u.username || "unknown"}</span>
+              <span>{u.username || "unknown"}</span>
               <span>{u.coins}</span>
             </div>
           ))}
@@ -367,21 +316,20 @@ export default function Home() {
 
       </div>
 
+      {/* BET MODAL */}
       {selected && (
-        <div className="modalOverlay">
-          <div className="betBox">
-
+        <div className="overlay">
+          <div className="modal">
             <h2>{selected.team}</h2>
-            <p>Odds {selected.odds}</p>
+            <p>Odds: {selected.odds}</p>
 
             <input
               value={stake}
               onChange={(e) => setStake(Number(e.target.value))}
             />
 
-            <button onClick={placeBet}>Confirm</button>
+            <button onClick={placeBet}>Confirm Bet</button>
             <button onClick={() => setSelected(null)}>Cancel</button>
-
           </div>
         </div>
       )}
@@ -397,28 +345,23 @@ export default function Home() {
             #05060a;
         }
 
-        .title {
-          font-size:28px;
-          font-weight:900;
-        }
-
-        .userText {
-          opacity:0.7;
-        }
-
-        .topBar {
+        .top {
           display:flex;
           justify-content:space-between;
           margin-bottom:16px;
         }
 
-        .layout {
+        .title { font-size:28px; font-weight:900; }
+
+        .user { opacity:0.7; }
+
+        .grid {
           display:grid;
           grid-template-columns:1fr 300px;
           gap:16px;
         }
 
-        .matchCard {
+        .match {
           background: rgba(255,255,255,0.08);
           padding:14px;
           border-radius:14px;
@@ -426,9 +369,9 @@ export default function Home() {
           transition:0.3s;
         }
 
-        .matchCard:hover {
+        .match:hover {
           transform: translateY(-6px);
-          box-shadow: 0 20px 50px rgba(99,102,241,0.3);
+          box-shadow:0 20px 60px rgba(99,102,241,0.3);
         }
 
         .live {
@@ -438,18 +381,30 @@ export default function Home() {
           font-size:10px;
         }
 
-        .btns {
+        .betRow {
           display:flex;
           gap:10px;
           margin-top:10px;
         }
 
-        .btns button {
+        .green {
           flex:1;
-          padding:10px;
+          background: linear-gradient(135deg,#22c55e,#16a34a);
           border:none;
+          padding:10px;
           border-radius:10px;
           font-weight:700;
+          color:white;
+        }
+
+        .red {
+          flex:1;
+          background: linear-gradient(135deg,#ef4444,#b91c1c);
+          border:none;
+          padding:10px;
+          border-radius:10px;
+          font-weight:700;
+          color:white;
         }
 
         .side {
@@ -461,14 +416,9 @@ export default function Home() {
         .row {
           display:flex;
           justify-content:space-between;
-          padding:4px 0;
         }
 
-        .name {
-          opacity:0.9;
-        }
-
-        .modalOverlay {
+        .overlay {
           position:fixed;
           inset:0;
           background:rgba(0,0,0,0.7);
@@ -477,7 +427,7 @@ export default function Home() {
           justify-content:center;
         }
 
-        .betBox {
+        .modal {
           width:320px;
           background:#111827;
           padding:16px;
